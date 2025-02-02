@@ -1,12 +1,22 @@
 import sys
+import os
 
 # Define the list of built-in commands
 BUILTINS = {"echo", "exit", "type"}
 
+def find_executable(command):
+    """Search for the command in the directories listed in $PATH."""
+    paths = os.getenv("PATH", "").split(":")  # Get directories in $PATH
+    for path in paths:
+        executable_path = os.path.join(path, command)
+        if os.path.isfile(executable_path) and os.access(executable_path, os.X_OK):
+            return executable_path
+    return None  # Command not found in $PATH
+
 def main():
     while True:  # REPL loop
         sys.stdout.write("$ ")
-        sys.stdout.flush()  # Ensure the prompt is displayed immediately
+        sys.stdout.flush()  # Ensure prompt is displayed immediately
 
         try:
             command = input().strip()  # Read input and strip extra spaces
@@ -25,7 +35,11 @@ def main():
                 if cmd_name in BUILTINS:
                     print(f"{cmd_name} is a shell builtin")
                 else:
-                    print(f"{cmd_name}: not found")
+                    executable = find_executable(cmd_name)
+                    if executable:
+                        print(f"{cmd_name} is {executable}")
+                    else:
+                        print(f"{cmd_name}: not found")
 
             else:
                 print(f"{command}: command not found")  # Mock unknown commands
