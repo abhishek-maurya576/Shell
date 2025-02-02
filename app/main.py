@@ -1,12 +1,15 @@
 import sys
 
+# Define the list of built-in commands
+BUILTINS = {"echo", "exit", "type"}
+
 def main():
-    while True:  # Keep running the REPL
+    while True:  # REPL loop
         sys.stdout.write("$ ")
-        sys.stdout.flush()  # Ensure prompt appears immediately
+        sys.stdout.flush()  # Ensure the prompt is displayed immediately
 
         try:
-            command = input().strip()  # Read and clean input
+            command = input().strip()  # Read input and strip extra spaces
 
             if command.startswith("exit"):  # Handle 'exit' command
                 parts = command.split()
@@ -14,12 +17,20 @@ def main():
                 sys.exit(exit_code)
 
             elif command.startswith("echo "):  # Handle 'echo' command
-                print(command[5:])  # Print everything after 'echo '
+                print(command[5:])
+
+            elif command.startswith("type "):  # Handle 'type' command
+                cmd_name = command.split()[1]  # Extract the command name
+
+                if cmd_name in BUILTINS:
+                    print(f"{cmd_name} is a shell builtin")
+                else:
+                    print(f"{cmd_name}: not found")
 
             else:
                 print(f"{command}: command not found")  # Mock unknown commands
 
-        except EOFError:  # Handle Ctrl+D (End of Input)
+        except EOFError:  # Handle Ctrl+D (EOF)
             break
         except ValueError:  # Handle invalid exit codes
             print("exit: numeric argument required")
