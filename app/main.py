@@ -1,6 +1,7 @@
 import sys
 import os
 import subprocess
+import shlex  # ✅ Import shlex to handle quotes properly
 
 BUILTINS = {"echo", "exit", "type"}
 
@@ -18,7 +19,7 @@ def execute_command(command, args):
     executable = find_executable(command)
     if executable:
         try:
-            subprocess.run([command] + args)  # Pass only command name, not full path
+            subprocess.run([command] + args)  # ✅ Pass command name instead of full path
         except Exception as e:
             print(f"Error executing {command}: {e}")
     else:
@@ -34,7 +35,10 @@ def main():
             if not user_input:
                 continue
 
-            parts = user_input.split()
+            parts = shlex.split(user_input)  # ✅ Properly handle quoted arguments
+            if not parts:
+                continue
+
             command = parts[0]
             args = parts[1:]
 
@@ -42,7 +46,7 @@ def main():
                 sys.exit(int(args[0]) if args else 0)
 
             elif command == "echo":
-                print(" ".join(args))
+                print(" ".join(args))  # ✅ Preserves spaces inside quotes
 
             elif command == "type":
                 if not args:
@@ -60,7 +64,7 @@ def main():
                         print(f"{cmd_name}: not found")
 
             else:
-                execute_command(command, args)  # Run external commands
+                execute_command(command, args)  # ✅ Handles quoted file names for `cat`
 
         except EOFError:
             break
