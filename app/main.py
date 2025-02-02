@@ -102,12 +102,6 @@ def parse_and_execute(user_input):
                     f.write(output + "\n")
             except Exception as e:
                 print(f"Error writing to {output_file}: {e}")
-        elif error_file:
-            try:
-                with open(error_file, "w") as f:
-                    f.write(output + "\n")
-            except Exception as e:
-                print(f"Error writing to {error_file}: {e}")
         else:
             print(output)
 
@@ -132,12 +126,6 @@ def parse_and_execute(user_input):
                     f.write(result + "\n")
             except Exception as e:
                 print(f"Error writing to {output_file}: {e}")
-        elif error_file:
-            try:
-                with open(error_file, "w") as f:
-                    f.write(result + "\n")
-            except Exception as e:
-                print(f"Error writing to {error_file}: {e}")
         else:
             print(result)
 
