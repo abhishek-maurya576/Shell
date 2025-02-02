@@ -36,6 +36,7 @@ def execute_command(command, args, output_file=None, error_file=None):
             # If no redirection was provided, print any output.
             if not output_file and result.stdout:
                 print(result.stdout.strip())
+            # Don't print stderr if it is redirected to a file.
             if not error_file and result.stderr:
                 print(result.stderr.strip())
         except Exception as e:
@@ -107,7 +108,6 @@ def parse_and_execute(user_input):
                     f.write(output + "\n")
             except Exception as e:
                 print(f"Error writing to {error_file}: {e}")
-            print(output)
         else:
             print(output)
 
@@ -138,7 +138,6 @@ def parse_and_execute(user_input):
                     f.write(result + "\n")
             except Exception as e:
                 print(f"Error writing to {error_file}: {e}")
-            print(result)
         else:
             print(result)
 
