@@ -88,7 +88,15 @@ def parse_and_execute(user_input):
     elif command == "echo":
         output = " ".join(args)
 
-        if output_file:
+        if error_file:
+            os.makedirs(os.path.dirname(error_file), exist_ok=True)  # Ensure directory exists
+            try:
+                with open(error_file, "w") as f:
+                    f.write(output + "\n")
+            except Exception as e:
+                print(f"Error writing to {error_file}: {e}", file=sys.stderr)
+        elif output_file:
+            os.makedirs(os.path.dirname(output_file), exist_ok=True)  # Ensure directory exists
             try:
                 with open(output_file, "w") as f:
                     f.write(output + "\n")
