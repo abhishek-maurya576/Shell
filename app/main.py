@@ -21,9 +21,19 @@ def execute_command(command, args, output_file=None):
         try:
             if output_file:
                 with open(output_file, "w") as out:
-                    subprocess.run([command] + args, stdout=out, stderr=subprocess.PIPE, text=True)
+                    result = subprocess.run(
+                        [command] + args, stdout=out, stderr=subprocess.PIPE, text=True
+                    )
+                    if result.stderr:
+                        print(result.stderr.strip())  # Print errors if any
             else:
-                subprocess.run([command] + args)
+                result = subprocess.run(
+                    [command] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+                )
+                if result.stdout:
+                    print(result.stdout.strip())  # Print stdout
+                if result.stderr:
+                    print(result.stderr.strip())  # Print stderr (for errors)
         except Exception as e:
             print(f"Error executing {command}: {e}")
     else:
@@ -37,12 +47,11 @@ def parse_and_execute(user_input):
         return
 
     # Detect redirection (`>` or `1>`)
+    redirect_index = None
     if ">" in parts:
         redirect_index = parts.index(">")
     elif "1>" in parts:
         redirect_index = parts.index("1>")
-    else:
-        redirect_index = None
 
     output_file = None
     if redirect_index is not None:
