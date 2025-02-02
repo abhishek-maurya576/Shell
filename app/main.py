@@ -19,6 +19,11 @@ def execute_command(command, args, output_file=None, error_file=None):
     executable = find_executable(command)
     if executable:
         try:
+            if output_file:
+                os.makedirs(os.path.dirname(output_file), exist_ok=True)
+            if error_file:
+                os.makedirs(os.path.dirname(error_file), exist_ok=True)
+
             stdout_target = open(output_file, "w") if output_file else subprocess.PIPE
             stderr_target = open(error_file, "w") if error_file else subprocess.PIPE
 
@@ -89,14 +94,14 @@ def parse_and_execute(user_input):
         output = " ".join(args)
 
         if error_file:
-            os.makedirs(os.path.dirname(error_file), exist_ok=True)  # Ensure directory exists
+            os.makedirs(os.path.dirname(error_file), exist_ok=True)
             try:
                 with open(error_file, "w") as f:
                     f.write(output + "\n")
             except Exception as e:
                 print(f"Error writing to {error_file}: {e}", file=sys.stderr)
         elif output_file:
-            os.makedirs(os.path.dirname(output_file), exist_ok=True)  # Ensure directory exists
+            os.makedirs(os.path.dirname(output_file), exist_ok=True)
             try:
                 with open(output_file, "w") as f:
                     f.write(output + "\n")
@@ -121,6 +126,7 @@ def parse_and_execute(user_input):
                 result = f"{cmd_name}: not found"
 
         if output_file:
+            os.makedirs(os.path.dirname(output_file), exist_ok=True)
             try:
                 with open(output_file, "w") as f:
                     f.write(result + "\n")
