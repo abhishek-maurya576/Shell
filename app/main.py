@@ -90,26 +90,27 @@ def parse_and_execute(user_input):
     command = parts[0]
     args = parts[1:]
 
-    if command == "exit":
-        sys.exit(int(args[0]) if args else 0)
-
     elif command == "echo":
-        output = " ".join(args)
-        # For builtins, if redirection is given, write to that file.
-        if output_file:
-            try:
-                with open(output_file, "w") as f:
-                    f.write(output + "\n")
-            except Exception as e:
-                print(f"Error writing to {output_file}: {e}")
-        elif error_file:
-            try:
-                with open(error_file, "w") as f:
-                    f.write(output + "\n")
-            except Exception as e:
-                print(f"Error writing to {error_file}: {e}")
-        else:
-            print(output)
+    output = " ".join(args)
+    
+    # Check if stderr redirection is specified.
+    if error_file:
+        try:
+            with open(error_file, "w") as f:
+                f.write(output + "\n")
+        except Exception as e:
+            print(f"Error writing to {error_file}: {e}")
+    elif output_file:
+        # If stdout redirection is specified, write to output file.
+        try:
+            with open(output_file, "w") as f:
+                f.write(output + "\n")
+        except Exception as e:
+            print(f"Error writing to {output_file}: {e}")
+    else:
+        # Print to standard output if no redirection is provided.
+        print(output)
+
 
     elif command == "type":
         if not args:
