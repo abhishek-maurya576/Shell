@@ -2,36 +2,35 @@ import sys
 import os
 import subprocess
 
-# Define the list of built-in commands
 BUILTINS = {"echo", "exit", "type"}
 
 def find_executable(command):
-    """Search for the command in the directories listed in $PATH."""
-    paths = os.getenv("PATH", "").split(":")  # Get directories in $PATH
+    """Search for the command in $PATH and return its absolute path if found."""
+    paths = os.getenv("PATH", "").split(":")
     for path in paths:
         executable_path = os.path.join(path, command)
         if os.path.isfile(executable_path) and os.access(executable_path, os.X_OK):
             return executable_path
-    return None  # Command not found in $PATH
+    return None
 
 def execute_command(command, args):
-    """Execute an external program with arguments."""
+    """Execute an external program with arguments, ensuring Arg #0 is just the command name."""
     executable = find_executable(command)
     if executable:
         try:
-            subprocess.run([executable] + args)  # Run the program with arguments
+            subprocess.run([command] + args)  # Pass only command name, not full path
         except Exception as e:
             print(f"Error executing {command}: {e}")
     else:
         print(f"{command}: command not found")
 
 def main():
-    while True:  # REPL loop
+    while True:
         sys.stdout.write("$ ")
-        sys.stdout.flush()  # Ensure prompt is displayed immediately
+        sys.stdout.flush()
 
         try:
-            user_input = input().strip()  # Read input and strip extra spaces
+            user_input = input().strip()
             if not user_input:
                 continue
 
@@ -39,20 +38,18 @@ def main():
             command = parts[0]
             args = parts[1:]
 
-            if command == "exit":  # Handle 'exit' command
-                exit_code = int(args[0]) if args else 0
-                sys.exit(exit_code)
+            if command == "exit":
+                sys.exit(int(args[0]) if args else 0)
 
-            elif command == "echo":  # Handle 'echo' command
+            elif command == "echo":
                 print(" ".join(args))
 
-            elif command == "type":  # Handle 'type' command
+            elif command == "type":
                 if not args:
                     print("type: missing argument")
                     continue
                 
                 cmd_name = args[0]
-
                 if cmd_name in BUILTINS:
                     print(f"{cmd_name} is a shell builtin")
                 else:
@@ -65,11 +62,11 @@ def main():
             else:
                 execute_command(command, args)  # Run external commands
 
-        except EOFError:  # Handle Ctrl+D (EOF)
+        except EOFError:
             break
-        except ValueError:  # Handle invalid exit codes
+        except ValueError:
             print("exit: numeric argument required")
-            sys.exit(255)  # Standard exit code for invalid exit args
+            sys.exit(255)
 
 if __name__ == "__main__":
     main()
