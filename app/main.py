@@ -14,52 +14,65 @@ def find_executable(command):
             return executable_path
     return None
 
-def execute_command(command, args, output_file=None):
+def execute_command(command, args, output_file=None, error_file=None):
     """Execute an external program with arguments and redirect output if needed."""
     executable = find_executable(command)
     if executable:
         try:
+            stdout_target = open(output_file, "w") if output_file else subprocess.PIPE
+            stderr_target = open(error_file, "w") if error_file else subprocess.PIPE
+
+            result = subprocess.run(
+                [command] + args, stdout=stdout_target, stderr=stderr_target, text=True
+            )
+
             if output_file:
-                with open(output_file, "w") as out:
-                    result = subprocess.run(
-                        [command] + args, stdout=out, stderr=subprocess.PIPE, text=True
-                    )
-                    if result.stderr:
-                        print(result.stderr.strip())  # Print errors if any
-            else:
-                result = subprocess.run(
-                    [command] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-                )
-                if result.stdout:
-                    print(result.stdout.strip())  # Print stdout
-                if result.stderr:
-                    print(result.stderr.strip())  # Print stderr (for errors)
+                stdout_target.close()
+            if error_file:
+                stderr_target.close()
+
+            # Print stdout and stderr if not redirected
+            if result.stdout and not output_file:
+                print(result.stdout.strip())
+            if result.stderr and not error_file:
+                print(result.stderr.strip())
+
         except Exception as e:
             print(f"Error executing {command}: {e}")
     else:
-        print(f"{command}: command not found")
-
+        error_message = f"{command}: command not found"
+        if error_file:
+            with open(error_file, "w") as f:
+                f.write(error_message + "\n")
+        else:
+            print(error_message)
 
 def parse_and_execute(user_input):
-    """Parse input, detect redirection, and execute commands accordingly."""
+    """Parse input, detect redirection for stdout (>) and stderr (2>), and execute commands."""
     parts = shlex.split(user_input)  # ✅ Handle quoted arguments properly
     if not parts:
         return
 
-    # Detect redirection (`>` or `1>`)
-    redirect_index = None
-    if ">" in parts:
-        redirect_index = parts.index(">")
-    elif "1>" in parts:
-        redirect_index = parts.index("1>")
-
     output_file = None
-    if redirect_index is not None:
-        if redirect_index + 1 < len(parts):  # Ensure a file is specified
-            output_file = parts[redirect_index + 1]
-            parts = parts[:redirect_index]  # Remove redirection part from command
+    error_file = None
+
+    # Detect `>` (stdout redirection) and `2>` (stderr redirection)
+    if "2>" in parts:
+        error_index = parts.index("2>")
+        if error_index + 1 < len(parts):
+            error_file = parts[error_index + 1]
+            parts = parts[:error_index]  # Remove redirection part from command
         else:
-            print("Syntax error: missing file for redirection")
+            print("Syntax error: missing file for stderr redirection")
+            return
+
+    if ">" in parts:
+        output_index = parts.index(">")
+        if output_index + 1 < len(parts):
+            output_file = parts[output_index + 1]
+            parts = parts[:output_index]  # Remove redirection part from command
+        else:
+            print("Syntax error: missing file for stdout redirection")
             return
 
     if not parts:
@@ -96,7 +109,7 @@ def parse_and_execute(user_input):
                 print(f"{cmd_name}: not found")
 
     else:
-        execute_command(command, args, output_file)
+        execute_command(command, args, output_file, error_file)
 
 def main():
     while True:
