@@ -19,7 +19,6 @@ def execute_command(command, args, output_file=None, error_file=None):
     executable = find_executable(command)
     if executable:
         try:
-            # Open redirection files if provided.
             stdout_target = open(output_file, "w") if output_file else subprocess.PIPE
             stderr_target = open(error_file, "w") if error_file else subprocess.PIPE
 
@@ -27,20 +26,17 @@ def execute_command(command, args, output_file=None, error_file=None):
                 [command] + args, stdout=stdout_target, stderr=stderr_target, text=True
             )
 
-            # Close the file handles if we opened them.
             if output_file:
                 stdout_target.close()
             if error_file:
                 stderr_target.close()
 
-            # If no redirection was provided, print any output.
             if not output_file and result.stdout:
                 print(result.stdout.strip())
-            # Don't print stderr if it is redirected to a file.
             if not error_file and result.stderr:
-                print(result.stderr.strip())
+                print(result.stderr.strip(), file=sys.stderr)
         except Exception as e:
-            print(f"Error executing {command}: {e}")
+            print(f"Error executing {command}: {e}", file=sys.stderr)
     else:
         error_message = f"{command}: command not found"
         if error_file:
@@ -48,43 +44,39 @@ def execute_command(command, args, output_file=None, error_file=None):
                 with open(error_file, "w") as f:
                     f.write(error_message + "\n")
             except Exception as e:
-                print(f"Error writing to {error_file}: {e}")
+                print(f"Error writing to {error_file}: {e}", file=sys.stderr)
         else:
-            print(error_message)
+            print(error_message, file=sys.stderr)
 
 def parse_and_execute(user_input):
     """Parse input, detect redirection for stdout (>) and stderr (2>), and execute commands."""
-    parts = shlex.split(user_input)  # Handle quoted arguments properly
+    parts = shlex.split(user_input)
     if not parts:
         return
 
     output_file = None
     error_file = None
 
-    # Check for stderr redirection first.
     if "2>" in parts:
         error_index = parts.index("2>")
         if error_index + 1 < len(parts):
             error_file = parts[error_index + 1]
-            # Remove the redirection token and file from the parts.
             parts = parts[:error_index] + parts[error_index+2:]
         else:
-            print("Syntax error: missing file for stderr redirection")
+            print("Syntax error: missing file for stderr redirection", file=sys.stderr)
             return
 
-    # Now check for stdout redirection.
     if ">" in parts:
         output_index = parts.index(">")
         if output_index + 1 < len(parts):
             output_file = parts[output_index + 1]
-            # Remove the redirection token and file from the parts.
-            parts = parts[:output_index]  # Remove everything from ">" onward.
+            parts = parts[:output_index]
         else:
-            print("Syntax error: missing file for stdout redirection")
+            print("Syntax error: missing file for stdout redirection", file=sys.stderr)
             return
 
     if not parts:
-        print("Syntax error: missing command before redirection")
+        print("Syntax error: missing command before redirection", file=sys.stderr)
         return
 
     command = parts[0]
@@ -95,27 +87,19 @@ def parse_and_execute(user_input):
 
     elif command == "echo":
         output = " ".join(args)
-        
-        # Check if stderr redirection is specified.
-        if error_file:
-            try:
-                with open(error_file, "w") as f:
-                    f.write(output + "\n")
-            except Exception as e:
-                print(f"Error writing to {error_file}: {e}")
-        elif output_file:
-            # If stdout redirection is specified, write to output file.
+
+        if output_file:
             try:
                 with open(output_file, "w") as f:
                     f.write(output + "\n")
             except Exception as e:
-                print(f"Error writing to {output_file}: {e}")
+                print(f"Error writing to {output_file}: {e}", file=sys.stderr)
         else:
-            # Print to standard output if no redirection is provided.
             print(output)
+
     elif command == "type":
         if not args:
-            print("type: missing argument")
+            print("type: missing argument", file=sys.stderr)
             return
         
         cmd_name = args[0]
@@ -133,16 +117,9 @@ def parse_and_execute(user_input):
                 with open(output_file, "w") as f:
                     f.write(result + "\n")
             except Exception as e:
-                print(f"Error writing to {output_file}: {e}")
-        elif error_file:
-            try:
-                with open(error_file, "w") as f:
-                    f.write(result + "\n")
-            except Exception as e:
-                print(f"Error writing to {error_file}: {e}")
+                print(f"Error writing to {output_file}: {e}", file=sys.stderr)
         else:
             print(result)
-
     else:
         execute_command(command, args, output_file, error_file)
 
@@ -158,7 +135,7 @@ def main():
         except EOFError:
             break
         except ValueError:
-            print("exit: numeric argument required")
+            print("exit: numeric argument required", file=sys.stderr)
             sys.exit(255)
 
 if __name__ == "__main__":
