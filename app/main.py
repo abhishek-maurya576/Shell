@@ -12,6 +12,8 @@ def main():
                 parts = command.split()
                 exit_code = int(parts[1]) if len(parts) > 1 else 0
                 sys.exit(exit_code)
+            elif command.startswith("echo"):
+                print(command[5:])  # Mock echo command
 
             print(f"{command}: command not found")  # Mock command handling
 
