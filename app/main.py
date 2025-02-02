@@ -19,12 +19,16 @@ def execute_command(command, args, output_file=None):
     executable = find_executable(command)
     if executable:
         try:
-            with open(output_file, "w") if output_file else None as out:
-                subprocess.run([command] + args, stdout=out if out else None)
+            if output_file:
+                with open(output_file, "w") as out:
+                    subprocess.run([command] + args, stdout=out, stderr=subprocess.PIPE, text=True)
+            else:
+                subprocess.run([command] + args)
         except Exception as e:
             print(f"Error executing {command}: {e}")
     else:
         print(f"{command}: command not found")
+
 
 def parse_and_execute(user_input):
     """Parse input, detect redirection, and execute commands accordingly."""
