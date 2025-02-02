@@ -1,5 +1,6 @@
 import sys
 import os
+import subprocess
 
 # Define the list of built-in commands
 BUILTINS = {"echo", "exit", "type"}
@@ -13,24 +14,44 @@ def find_executable(command):
             return executable_path
     return None  # Command not found in $PATH
 
+def execute_command(command, args):
+    """Execute an external program with arguments."""
+    executable = find_executable(command)
+    if executable:
+        try:
+            subprocess.run([executable] + args)  # Run the program with arguments
+        except Exception as e:
+            print(f"Error executing {command}: {e}")
+    else:
+        print(f"{command}: command not found")
+
 def main():
     while True:  # REPL loop
         sys.stdout.write("$ ")
         sys.stdout.flush()  # Ensure prompt is displayed immediately
 
         try:
-            command = input().strip()  # Read input and strip extra spaces
+            user_input = input().strip()  # Read input and strip extra spaces
+            if not user_input:
+                continue
 
-            if command.startswith("exit"):  # Handle 'exit' command
-                parts = command.split()
-                exit_code = int(parts[1]) if len(parts) > 1 else 0
+            parts = user_input.split()
+            command = parts[0]
+            args = parts[1:]
+
+            if command == "exit":  # Handle 'exit' command
+                exit_code = int(args[0]) if args else 0
                 sys.exit(exit_code)
 
-            elif command.startswith("echo "):  # Handle 'echo' command
-                print(command[5:])
+            elif command == "echo":  # Handle 'echo' command
+                print(" ".join(args))
 
-            elif command.startswith("type "):  # Handle 'type' command
-                cmd_name = command.split()[1]  # Extract the command name
+            elif command == "type":  # Handle 'type' command
+                if not args:
+                    print("type: missing argument")
+                    continue
+                
+                cmd_name = args[0]
 
                 if cmd_name in BUILTINS:
                     print(f"{cmd_name} is a shell builtin")
@@ -42,7 +63,7 @@ def main():
                         print(f"{cmd_name}: not found")
 
             else:
-                print(f"{command}: command not found")  # Mock unknown commands
+                execute_command(command, args)  # Run external commands
 
         except EOFError:  # Handle Ctrl+D (EOF)
             break
