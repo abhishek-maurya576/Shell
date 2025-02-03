@@ -19,11 +19,6 @@ def execute_command(command, args, output_file=None, error_file=None):
     executable = find_executable(command)
     if executable:
         try:
-            if output_file:
-                os.makedirs(os.path.dirname(output_file), exist_ok=True)
-            if error_file:
-                os.makedirs(os.path.dirname(error_file), exist_ok=True)
-
             stdout_target = open(output_file, "w") if output_file else subprocess.PIPE
             stderr_target = open(error_file, "w") if error_file else subprocess.PIPE
 
@@ -93,14 +88,7 @@ def parse_and_execute(user_input):
     elif command == "echo":
         output = " ".join(args)
 
-        if error_file:
-            os.makedirs(os.path.dirname(error_file), exist_ok=True)
-            try:
-                with open(error_file, "w") as f:
-                    f.write(output + "\n")
-            except Exception as e:
-                print(f"Error writing to {error_file}: {e}", file=sys.stderr)
-        elif output_file:
+        if output_file:
             os.makedirs(os.path.dirname(output_file), exist_ok=True)
             try:
                 with open(output_file, "w") as f:
@@ -109,6 +97,14 @@ def parse_and_execute(user_input):
                 print(f"Error writing to {output_file}: {e}", file=sys.stderr)
         else:
             print(output)
+
+        # Ensure error redirection does not capture normal output
+        if error_file:
+            try:
+                with open(error_file, "w") as f:
+                    f.write("")  # Write empty file
+            except Exception as e:
+                print(f"Error writing to {error_file}: {e}", file=sys.stderr)
 
     elif command == "type":
         if not args:
