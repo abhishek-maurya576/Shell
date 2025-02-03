@@ -132,7 +132,6 @@ def parse_and_execute(user_input):
             print(result)
     else:
         execute_command(command, args, output_file, error_file)
-
 def main():
     while True:
         sys.stdout.write("$ ")
