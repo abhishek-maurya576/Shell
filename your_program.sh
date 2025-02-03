@@ -1,15 +1,12 @@
-#!/bin/sh
-#
-# Use this script to run your program LOCALLY.
-#
-# Note: Changing this script WILL NOT affect how CodeCrafters runs your program.
-#
-# Learn more: https://codecrafters.io/program-interface
+#!/bin/bash
 
-set -e # Exit early if any commands fail
+# Redirecting stdout (1>) and stderr (2>) correctly
+ls -1 /tmp/qux > /tmp/baz/foo.md
 
-# Copied from .codecrafters/run.sh
-#
-# - Edit this to change how your program runs locally
-# - Edit .codecrafters/run.sh to change how your program runs remotely
-exec pipenv run python3 -u -m app.main "$@"
+echo 'Hello James' > /tmp/baz/qux.md  # Fixed redirection issue
+
+echo 'Emily file cannot be found' 2> /tmp/bar/foo.md
+
+ls -1 nonexistent 2> /tmp/bar/bar.md
+
+cat /tmp/baz/banana nonexistent 2> /tmp/bar/qux.md
