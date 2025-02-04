@@ -24,25 +24,27 @@ def execute_command(command, args, output_file=None, error_file=None):
                 os.makedirs(os.path.dirname(output_file), exist_ok=True)
             if error_file and os.path.dirname(error_file):
                 os.makedirs(os.path.dirname(error_file), exist_ok=True)
-                
-            stdout_target = open(output_file, "w") if output_file else subprocess.PIPE
-            stderr_target = open(error_file, "w") if error_file else subprocess.PIPE
-            
-            try:
-                result = subprocess.run(
-                    [executable] + args, stdout=stdout_target, stderr=stderr_target, text=True
-                )
 
-                if not output_file and result.stdout:
-                    print(result.stdout.strip())
-                if not error_file and result.stderr:
-                    print(result.stderr.strip(), file=sys.stderr)
-            finally:
-                # Close file handles if they were opened
-                if output_file and stdout_target != subprocess.PIPE:
-                    stdout_target.close()
-                if error_file and stderr_target != subprocess.PIPE:
-                    stderr_target.close()
+            # Run command and capture output
+            result = subprocess.run(
+                [executable] + args,
+                capture_output=True,
+                text=True
+            )
+
+            # Handle stdout
+            if output_file:
+                with open(output_file, "w") as f:
+                    f.write(result.stdout)
+            elif result.stdout:
+                print(result.stdout.strip())
+
+            # Handle stderr
+            if error_file:
+                with open(error_file, "w") as f:
+                    f.write(result.stderr)
+            elif result.stderr:
+                print(result.stderr.strip(), file=sys.stderr)
                     
         except Exception as e:
             print(f"Error executing {command}: {e}", file=sys.stderr)
