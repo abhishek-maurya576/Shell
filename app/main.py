@@ -1,140 +1,151 @@
+import sys
 import os
 import subprocess
-import sys
-from typing import Optional
-BUILTINS = ["echo", "exit", "type", "pwd", "cd"]
-def present_on_path(command) -> Optional[str]:
-    path = os.environ.get("PATH")
-    if path:
-        dirs = path.split(":")
-        for dir in dirs:
-            full_path = os.path.join(dir, command)
-            if os.path.isfile(full_path):
-                return full_path
+import shlex
+
+BUILTINS = {"echo", "exit", "type"}
+
+def find_executable(command):
+    """Search for the command in $PATH and return its absolute path if found."""
+    paths = os.getenv("PATH", "").split(":")
+    for path in paths:
+        executable_path = os.path.join(path, command)
+        if os.path.isfile(executable_path) and os.access(executable_path, os.X_OK):
+            return executable_path
     return None
-def handle_type(args) -> tuple[str, str]:
-    if args[0] in BUILTINS:
-        return (f"{args[0]} is a shell builtin", "")
+
+def execute_command(command, args, output_file=None, error_file=None):
+    """Execute an external program with arguments and redirect stdout and/or stderr if needed."""
+    executable = find_executable(command)
+    if executable:
+        try:
+            stdout_target = open(output_file, "w") if output_file else subprocess.PIPE
+            stderr_target = open(error_file, "w") if error_file else subprocess.PIPE
+
+            result = subprocess.run(
+                [command] + args, stdout=stdout_target, stderr=stderr_target, text=True
+            )
+
+            if output_file:
+                stdout_target.close()
+            if error_file:
+                stderr_target.close()
+
+            if not output_file and result.stdout:
+                print(result.stdout.strip())
+            if not error_file and result.stderr:
+                print(result.stderr.strip(), file=sys.stderr)
+        except Exception as e:
+            print(f"Error executing {command}: {e}", file=sys.stderr)
     else:
-        full_path = present_on_path(args[0])
-        if full_path:
-            return (f"{args[0]} is {full_path}", "")
-    return ("", f"{args[0]}: not found")
-def normalise_args(user_input) -> list[str]:
-    res = []
-    arg = ""
-    i = 0
-    while i < len(user_input):
-        if user_input[i] == "'":
-            i += 1
-            start = i
-            while i < len(user_input) and user_input[i] != "'":
-                i += 1
-            arg += user_input[start:i]
-            i += 1
-        elif user_input[i] == '"':
-            i += 1
-            while i < len(user_input):
-                if user_input[i] == "\\":
-                    if user_input[i + 1] in ["\\", "$", '"', "\n"]:
-                        arg += user_input[i + 1]
-                        i += 2
-                    else:
-                        arg += user_input[i]
-                        i += 1
-                elif user_input[i] == '"':
-                    break
-                else:
-                    arg += user_input[i]
-                    i += 1
-            i += 1
-        elif user_input[i] == " ":
-            if arg:
-                res.append(arg)
-            arg = ""
-            i += 1
-        elif user_input[i] == "\\":
-            i += 1
+        error_message = f"{command}: command not found"
+        if error_file:
+            try:
+                with open(error_file, "w") as f:
+                    f.write(error_message + "\n")
+            except Exception as e:
+                print(f"Error writing to {error_file}: {e}", file=sys.stderr)
         else:
-            while i < len(user_input) and user_input[i] != " ":
-                if user_input[i] == "\\":
-                    arg += user_input[i + 1]
-                    i += 2
-                else:
-                    arg += user_input[i]
-                    i += 1
-    if arg:
-        res.append(arg)
-    return res
-def cd_cmd(args, cur_dir) -> tuple[str, str]:
-    path = args[0]
-    new_dir = cur_dir
-    if path.startswith("/"):
-        new_dir = path
+            print(error_message, file=sys.stderr)
+
+def parse_and_execute(user_input):
+    """Parse input, detect redirection for stdout (>) and stderr (2>), and execute commands."""
+    parts = shlex.split(user_input)
+    if not parts:
+        return
+
+    output_file = None
+    error_file = None
+
+    if "2>" in parts:
+        error_index = parts.index("2>")
+        if error_index + 1 < len(parts):
+            error_file = parts[error_index + 1]
+            parts = parts[:error_index] + parts[error_index+2:]
+        else:
+            print("Syntax error: missing file for stderr redirection", file=sys.stderr)
+            return
+
+    if ">" in parts:
+        output_index = parts.index(">")
+        if output_index + 1 < len(parts):
+            output_file = parts[output_index + 1]
+            parts = parts[:output_index]
+        else:
+            print("Syntax error: missing file for stdout redirection", file=sys.stderr)
+            return
+
+    if not parts:
+        print("Syntax error: missing command before redirection", file=sys.stderr)
+        return
+
+    command = parts[0]
+    args = parts[1:]
+
+    if command == "exit":
+        sys.exit(int(args[0]) if args else 0)
+
+    elif command == "echo":
+        output = " ".join(args)
+
+        if output_file:
+            os.makedirs(os.path.dirname(output_file), exist_ok=True)
+            try:
+                with open(output_file, "w") as f:
+                    f.write(output + "\n")
+            except Exception as e:
+                print(f"Error writing to {output_file}: {e}", file=sys.stderr)
+        else:
+            print(output)
+
+        # Ensure error redirection does not capture normal output
+        if error_file:
+            try:
+                with open(error_file, "w") as f:
+                    f.write("")  # Write empty file
+            except Exception as e:
+                print(f"Error writing to {error_file}: {e}", file=sys.stderr)
+
+    elif command == "type":
+        if not args:
+            print("type: missing argument", file=sys.stderr)
+            return
+        
+        cmd_name = args[0]
+        if cmd_name in BUILTINS:
+            result = f"{cmd_name} is a shell builtin"
+        else:
+            executable = find_executable(cmd_name)
+            if executable:
+                result = f"{cmd_name} is {executable}"
+            else:
+                result = f"{cmd_name}: not found"
+
+        if output_file:
+            os.makedirs(os.path.dirname(output_file), exist_ok=True)
+            try:
+                with open(output_file, "w") as f:
+                    f.write(result + "\n")
+            except Exception as e:
+                print(f"Error writing to {output_file}: {e}", file=sys.stderr)
+        else:
+            print(result)
     else:
-        for p in filter(None, path.split("/")):
-            if p == "..":
-                new_dir = new_dir.rsplit("/", 1)[0]
-            elif p == "~":
-                new_dir = os.environ["HOME"]
-            elif p != ".":
-                new_dir += f"/{p}"
-    if not os.path.exists(new_dir):
-        return (cur_dir, f"cd: {path}: No such file or directory")
-    else:
-        return (new_dir, "")
+        execute_command(command, args, output_file, error_file)
 def main():
-    cur_dir = os.getcwd()
     while True:
         sys.stdout.write("$ ")
         sys.stdout.flush()
-        user_input = input()
-        args = normalise_args(user_input)
-        cmd, args = args[0], args[1:]
-        # Handle redirections
-        redir = None
-        redir_file = None
-        if len(args) >= 3 and args[-2] in ["1>", ">", "2>"]:
-            redir = args[-2]
-            redir_file = args[-1]
-            args = args[:-2]
-        out, err = "", ""
-        if cmd == "exit":
-            if args[0] == "0":
-                break
-        elif cmd == "echo":
-            out = " ".join(args)
-        elif cmd == "type":
-            out, err = handle_type(args)
-        elif cmd == "pwd":
-            out = cur_dir
-        elif cmd == "cd":
-            cur_dir, err = cd_cmd(args, cur_dir)
-        else:
-            if present_on_path(cmd):
-                res = subprocess.run(
-                    args=([cmd] + args),
-                    capture_output=True,
-                    text=True,
-                )
-                out = res.stdout.rstrip()
-                err = res.stderr.rstrip()
-            else:
-                err = f"{user_input}: command not found"
-        # Write output and errors
-        if redir:
-            assert redir_file
-            if redir == "2>":
-                with open(redir_file, "w") as f:
-                    f.write(err)
-                err = ""
-            elif redir in ["1>", ">"]:
-                with open(redir_file, "w") as f:
-                    f.write(out)
-                out = ""
-        if err:
-            print(err, file=sys.stderr)
-        if out:
-            print(out, file=sys.stdout)
+
+        try:
+            user_input = input().strip()
+            if user_input:
+                parse_and_execute(user_input)
+        except EOFError:
+            break
+        except ValueError:
+            print("exit: numeric argument required", file=sys.stderr)
+            sys.exit(255)
+
 if __name__ == "__main__":
-    main()    main()
+    main()
