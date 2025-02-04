@@ -24,7 +24,7 @@ def execute_command(command, args, output_file=None, error_file=None):
             
             try:
                 result = subprocess.run(
-                    [command] + args, stdout=stdout_target, stderr=stderr_target, text=True
+                    [executable] + args, stdout=stdout_target, stderr=stderr_target, text=True
                 )
 
                 if not output_file and result.stdout:
