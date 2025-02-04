@@ -101,14 +101,23 @@ def parse_and_execute(user_input):
     elif command == "echo":
         output = " ".join(args)
 
-        if output_file:
-            try:
+        try:
+            if error_file and os.path.dirname(error_file):
+                os.makedirs(os.path.dirname(error_file), exist_ok=True)
+            if output_file and os.path.dirname(output_file):
+                os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+            if error_file:
+                # For echo, we only write to error file if explicitly redirected
+                with open(error_file, "w") as f:
+                    pass  # Create empty file since echo doesn't produce stderr
+            if output_file:
                 with open(output_file, "w") as f:
                     f.write(output + "\n")
-            except Exception as e:
-                print(f"Error writing to {output_file}: {e}", file=sys.stderr)
-        else:
-            print(output)
+            else:
+                print(output)
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
 
     elif command == "type":
         if not args:
@@ -127,6 +136,8 @@ def parse_and_execute(user_input):
 
         if output_file:
             try:
+                if os.path.dirname(output_file):
+                    os.makedirs(os.path.dirname(output_file), exist_ok=True)
                 with open(output_file, "w") as f:
                     f.write(result + "\n")
             except Exception as e:
