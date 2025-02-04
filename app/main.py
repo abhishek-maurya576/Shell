@@ -19,17 +19,17 @@ def execute_command(command, args, output_file=None, error_file=None):
     executable = find_executable(command)
     if executable:
         try:
-            stdout_target = open(output_file, "w") if output_file else subprocess.PIPE
-            stderr_target = open(error_file, "w") if error_file else subprocess.PIPE
+            with open(output_file, "w") if output_file else subprocess.PIPE as stdout_target,
+                 open(error_file, "w") if error_file else subprocess.PIPE as stderr_target:
+                
+                result = subprocess.run(
+                    [command] + args, stdout=stdout_target, stderr=stderr_target, text=True
+                )
 
-            result = subprocess.run(
-                [command] + args, stdout=stdout_target, stderr=stderr_target, text=True
-            )
-
-            if output_file:
-                stdout_target.close()
-            if error_file:
-                stderr_target.close()
+            if not output_file and result.stdout:
+                print(result.stdout.strip())
+            if not error_file and result.stderr:
+                print(result.stderr.strip(), file=sys.stderr)
         except Exception as e:
             print(f"Error executing {command}: {e}", file=sys.stderr)
     else:
@@ -82,14 +82,15 @@ def parse_and_execute(user_input):
 
     elif command == "echo":
         output = " ".join(args)
-        try:
-            if output_file:
+
+        if output_file:
+            try:
                 with open(output_file, "w") as f:
                     f.write(output + "\n")
-            else:
-                print(output)
-        except Exception as e:
-            print(f"Error writing to {output_file}: {e}", file=sys.stderr)
+            except Exception as e:
+                print(f"Error writing to {output_file}: {e}", file=sys.stderr)
+        else:
+            print(output)
 
     elif command == "type":
         if not args:
@@ -106,14 +107,14 @@ def parse_and_execute(user_input):
             else:
                 result = f"{cmd_name}: not found"
 
-        try:
-            if output_file:
+        if output_file:
+            try:
                 with open(output_file, "w") as f:
                     f.write(result + "\n")
-            else:
-                print(result)
-        except Exception as e:
-            print(f"Error writing to {output_file}: {e}", file=sys.stderr)
+            except Exception as e:
+                print(f"Error writing to {output_file}: {e}", file=sys.stderr)
+        else:
+            print(result)
     else:
         execute_command(command, args, output_file, error_file)
 
