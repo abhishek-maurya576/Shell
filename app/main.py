@@ -30,11 +30,6 @@ def execute_command(command, args, output_file=None, error_file=None):
                 stdout_target.close()
             if error_file:
                 stderr_target.close()
-
-            if not output_file and result.stdout:
-                print(result.stdout.strip())
-            if not error_file and result.stderr:
-                print(result.stderr.strip(), file=sys.stderr)
         except Exception as e:
             print(f"Error executing {command}: {e}", file=sys.stderr)
     else:
@@ -87,24 +82,14 @@ def parse_and_execute(user_input):
 
     elif command == "echo":
         output = " ".join(args)
-
-        if output_file:
-            os.makedirs(os.path.dirname(output_file), exist_ok=True)
-            try:
+        try:
+            if output_file:
                 with open(output_file, "w") as f:
                     f.write(output + "\n")
-            except Exception as e:
-                print(f"Error writing to {output_file}: {e}", file=sys.stderr)
-        else:
-            print(output)
-
-        # Ensure error redirection does not capture normal output
-        if error_file:
-            try:
-                with open(error_file, "w") as f:
-                    f.write("")  # Write empty file
-            except Exception as e:
-                print(f"Error writing to {error_file}: {e}", file=sys.stderr)
+            else:
+                print(output)
+        except Exception as e:
+            print(f"Error writing to {output_file}: {e}", file=sys.stderr)
 
     elif command == "type":
         if not args:
@@ -121,17 +106,17 @@ def parse_and_execute(user_input):
             else:
                 result = f"{cmd_name}: not found"
 
-        if output_file:
-            os.makedirs(os.path.dirname(output_file), exist_ok=True)
-            try:
+        try:
+            if output_file:
                 with open(output_file, "w") as f:
                     f.write(result + "\n")
-            except Exception as e:
-                print(f"Error writing to {output_file}: {e}", file=sys.stderr)
-        else:
-            print(result)
+            else:
+                print(result)
+        except Exception as e:
+            print(f"Error writing to {output_file}: {e}", file=sys.stderr)
     else:
         execute_command(command, args, output_file, error_file)
+
 def main():
     while True:
         sys.stdout.write("$ ")
