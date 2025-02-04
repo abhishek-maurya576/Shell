@@ -19,17 +19,25 @@ def execute_command(command, args, output_file=None, error_file=None):
     executable = find_executable(command)
     if executable:
         try:
-            with open(output_file, "w") if output_file else subprocess.PIPE as stdout_target,
-                 open(error_file, "w") if error_file else subprocess.PIPE as stderr_target:
-                
+            stdout_target = open(output_file, "w") if output_file else subprocess.PIPE
+            stderr_target = open(error_file, "w") if error_file else subprocess.PIPE
+            
+            try:
                 result = subprocess.run(
                     [command] + args, stdout=stdout_target, stderr=stderr_target, text=True
                 )
 
-            if not output_file and result.stdout:
-                print(result.stdout.strip())
-            if not error_file and result.stderr:
-                print(result.stderr.strip(), file=sys.stderr)
+                if not output_file and result.stdout:
+                    print(result.stdout.strip())
+                if not error_file and result.stderr:
+                    print(result.stderr.strip(), file=sys.stderr)
+            finally:
+                # Close file handles if they were opened
+                if output_file and stdout_target != subprocess.PIPE:
+                    stdout_target.close()
+                if error_file and stderr_target != subprocess.PIPE:
+                    stderr_target.close()
+                    
         except Exception as e:
             print(f"Error executing {command}: {e}", file=sys.stderr)
     else:
