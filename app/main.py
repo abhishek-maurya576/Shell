@@ -19,6 +19,12 @@ def execute_command(command, args, output_file=None, error_file=None):
     executable = find_executable(command)
     if executable:
         try:
+            # Create parent directories if they don't exist
+            if output_file:
+                os.makedirs(os.path.dirname(output_file), exist_ok=True)
+            if error_file:
+                os.makedirs(os.path.dirname(error_file), exist_ok=True)
+                
             stdout_target = open(output_file, "w") if output_file else subprocess.PIPE
             stderr_target = open(error_file, "w") if error_file else subprocess.PIPE
             
@@ -44,6 +50,7 @@ def execute_command(command, args, output_file=None, error_file=None):
         error_message = f"{command}: command not found"
         if error_file:
             try:
+                os.makedirs(os.path.dirname(error_file), exist_ok=True)
                 with open(error_file, "w") as f:
                     f.write(error_message + "\n")
             except Exception as e:
