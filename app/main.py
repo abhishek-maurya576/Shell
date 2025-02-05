@@ -20,30 +20,25 @@ def execute_command(command, args, output_file=None, error_file=None):
     if executable:
         try:
             # Create parent directories if they don't exist
-            if output_file and os.path.dirname(output_file):
-                os.makedirs(os.path.dirname(output_file), exist_ok=True)
-            if error_file and os.path.dirname(error_file):
-                os.makedirs(os.path.dirname(error_file), exist_ok=True)
+            for file in [output_file, error_file]:
+                if file and os.path.dirname(file):
+                    os.makedirs(os.path.dirname(file), exist_ok=True)
 
-            # Run command and capture output
-            result = subprocess.run(
-                [executable] + args,
-                capture_output=True,
-                text=True
-            )
+            # Open output and error files for redirection
+            with open(output_file, "w") if output_file else None as stdout, \
+                 open(error_file, "w") if error_file else None as stderr:
+                result = subprocess.run(
+                    [executable] + args,
+                    stdout=stdout if output_file else subprocess.PIPE,
+                    stderr=stderr if error_file else subprocess.PIPE,
+                    text=True
+                )
 
-            # Handle stdout
-            if output_file:
-                with open(output_file, "w") as f:
-                    f.write(result.stdout)
-            elif result.stdout:
+            # Print output if not redirected
+            if not output_file and result.stdout:
                 print(result.stdout.strip())
 
-            # Handle stderr
-            if error_file:
-                with open(error_file, "w") as f:
-                    f.write(result.stderr)
-            elif result.stderr:
+            if not error_file and result.stderr:
                 print(result.stderr.strip(), file=sys.stderr)
                     
         except Exception as e:
@@ -52,8 +47,7 @@ def execute_command(command, args, output_file=None, error_file=None):
         error_message = f"{command}: command not found"
         if error_file:
             try:
-                if os.path.dirname(error_file):
-                    os.makedirs(os.path.dirname(error_file), exist_ok=True)
+                os.makedirs(os.path.dirname(error_file), exist_ok=True)
                 with open(error_file, "w") as f:
                     f.write(error_message + "\n")
             except Exception as e:
@@ -69,31 +63,26 @@ def parse_and_execute(user_input):
 
     output_file = None
     error_file = None
+    new_parts = []
 
-    if "2>" in parts:
-        error_index = parts.index("2>")
-        if error_index + 1 < len(parts):
-            error_file = parts[error_index + 1]
-            parts = parts[:error_index] + parts[error_index+2:]
+    i = 0
+    while i < len(parts):
+        if parts[i] == "2>" and i + 1 < len(parts):
+            error_file = parts[i + 1]
+            i += 2
+        elif parts[i] == ">" and i + 1 < len(parts):
+            output_file = parts[i + 1]
+            i += 2
         else:
-            print("Syntax error: missing file for stderr redirection", file=sys.stderr)
-            return
+            new_parts.append(parts[i])
+            i += 1
 
-    if ">" in parts:
-        output_index = parts.index(">")
-        if output_index + 1 < len(parts):
-            output_file = parts[output_index + 1]
-            parts = parts[:output_index]
-        else:
-            print("Syntax error: missing file for stdout redirection", file=sys.stderr)
-            return
-
-    if not parts:
+    if not new_parts:
         print("Syntax error: missing command before redirection", file=sys.stderr)
         return
 
-    command = parts[0]
-    args = parts[1:]
+    command = new_parts[0]
+    args = new_parts[1:]
 
     if command == "exit":
         sys.exit(int(args[0]) if args else 0)
@@ -102,15 +91,10 @@ def parse_and_execute(user_input):
         output = " ".join(args)
 
         try:
-            if error_file and os.path.dirname(error_file):
-                os.makedirs(os.path.dirname(error_file), exist_ok=True)
-            if output_file and os.path.dirname(output_file):
-                os.makedirs(os.path.dirname(output_file), exist_ok=True)
+            for file in [output_file, error_file]:
+                if file and os.path.dirname(file):
+                    os.makedirs(os.path.dirname(file), exist_ok=True)
 
-            if error_file:
-                # For echo, we only write to error file if explicitly redirected
-                with open(error_file, "w") as f:
-                    pass  # Create empty file since echo doesn't produce stderr
             if output_file:
                 with open(output_file, "w") as f:
                     f.write(output + "\n")
@@ -136,8 +120,7 @@ def parse_and_execute(user_input):
 
         if output_file:
             try:
-                if os.path.dirname(output_file):
-                    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+                os.makedirs(os.path.dirname(output_file), exist_ok=True)
                 with open(output_file, "w") as f:
                     f.write(result + "\n")
             except Exception as e:
